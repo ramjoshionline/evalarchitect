@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EvalArchitect — AI Eval PRD Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: #f8fafc; color: #334155; min-height: 100vh; }
+
+    /* ── Header ── */
+    .header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 40px; display: flex; align-items: center; height: 64px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .header-logo { width: 32px; height: 32px; background: linear-gradient(135deg,#6366f1,#8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .header-title { font-weight: 800; font-size: 15px; color: #0f172a; }
+    .header-sub { font-size: 11px; color: #94a3b8; margin-top: -2px; }
+    .header-right { margin-left: auto; font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 12px; }
+
+    /* ── Modal ── */
+    #key-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    #key-modal { background: #fff; border-radius: 20px; padding: 40px; width: 100%; max-width: 460px; margin: 24px; box-shadow: 0 25px 60px rgba(0,0,0,0.2); text-align: center; }
+    #key-modal .modal-icon { width: 56px; height: 56px; background: linear-gradient(135deg,#6366f1,#8b5cf6); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 20px; }
+    #key-modal h2 { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+    #key-modal .modal-desc { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+    #key-modal input { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; font-size: 14px; font-family: monospace; color: #0f172a; outline: none; margin-bottom: 10px; transition: border-color 0.15s; text-align: center; letter-spacing: 0.04em; }
+    #key-modal input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px #6366f115; }
+    #key-modal .modal-btn { width: 100%; background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; border: none; border-radius: 10px; padding: 13px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: inherit; margin-bottom: 14px; transition: opacity 0.15s; }
+    #key-modal .modal-btn:hover { opacity: 0.9; }
+    #key-modal .modal-hint { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+    #key-modal .modal-hint a { color: #6366f1; text-decoration: none; }
+    #key-modal .modal-error { font-size: 13px; color: #ef4444; margin-bottom: 10px; display: none; }
+    #settings-btn { position: fixed; bottom: 20px; right: 20px; width: 36px; height: 36px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); opacity: 0.5; transition: opacity 0.15s; z-index: 99; }
+    #settings-btn:hover { opacity: 1; }
+
+    /* ── Layout ── */
+    .main { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+
+    /* ── Hero ── */
+    .hero { text-align: center; margin-bottom: 40px; }
+    .hero-pill { display: inline-block; background: #eef2ff; color: #6366f1; padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; }
+    .hero h1 { font-size: 40px; font-weight: 800; color: #0f172a; line-height: 1.15; margin-bottom: 16px; }
+    .hero p { font-size: 16px; color: #64748b; line-height: 1.6; max-width: 540px; margin: 0 auto; }
+
+    /* ── Input ── */
+    .input-card { background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; padding: 28px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .input-card h3 { font-weight: 700; font-size: 15px; color: #0f172a; margin-bottom: 6px; }
+    .input-card p { font-size: 13px; color: #64748b; margin-bottom: 14px; }
+    #feature-input { width: 100%; min-height: 140px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; font-size: 14px; color: #0f172a; line-height: 1.6; resize: vertical; outline: none; font-family: inherit; background: #f8fafc; transition: border-color 0.15s; }
+    #feature-input:focus { border-color: #6366f1; }
+    .examples-label { font-size: 11px; color: #94a3b8; font-weight: 700; margin: 12px 0 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .examples-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .example-chip { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 99px; padding: 5px 12px; font-size: 12px; color: #475569; cursor: pointer; font-family: inherit; transition: all 0.12s; }
+    .example-chip:hover { background: #e2e8f0; color: #0f172a; }
+    .btn-row { display: flex; justify-content: flex-end; }
+    #generate-btn { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; border: none; border-radius: 12px; padding: 12px 28px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: opacity 0.15s; }
+    #generate-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+    #generate-btn .spinner { display: inline-block; animation: spin 0.8s linear infinite; }
+
+    /* ── Loading / Error ── */
+    #loading-card { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 48px; text-align: center; display: none; }
+    #loading-card .icon { font-size: 40px; margin-bottom: 16px; }
+    #loading-card h3 { font-weight: 700; font-size: 16px; color: #0f172a; margin-bottom: 8px; }
+    #loading-card p { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+    .loading-pills { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .loading-pill { background: #eef2ff; color: #6366f1; padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+    #error-card { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: none; }
+    #error-card .err-title { font-weight: 700; color: #b91c1c; margin-bottom: 4px; }
+    #error-card .err-msg { font-size: 13px; color: #991b1b; font-family: monospace; }
+    #result-area { display: none; }
+
+    /* ── Feature banner ── */
+    .feature-banner { background: linear-gradient(135deg,#0f172a 0%,#1e293b 100%); border-radius: 20px; padding: 32px 36px; margin-bottom: 8px; color: #fff; position: relative; overflow: hidden; }
+    .feature-banner::after { content: ''; position: absolute; top: 0; right: 0; width: 300px; height: 300px; background: radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 70%); pointer-events: none; }
+    .feature-banner .doc-label { font-size: 11px; color: #94a3b8; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    .feature-banner h2 { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+    .feature-banner .summary { font-size: 14px; color: #cbd5e1; line-height: 1.6; max-width: 640px; }
+
+    /* ── Audience nav ── */
+    .audience-nav { display: flex; gap: 8px; margin: 16px 0 8px; flex-wrap: wrap; }
+    .aud-btn { padding: 8px 18px; border-radius: 99px; border: 1.5px solid #e2e8f0; cursor: pointer; font-weight: 700; font-size: 12px; background: #fff; color: #64748b; transition: all 0.15s; font-family: inherit; white-space: nowrap; }
+    .aud-btn.active { border-color: #6366f1; background: #6366f1; color: #fff; }
+    .aud-hint { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+
+    /* ── Tabs ── */
+    .tabs-bar { display: flex; gap: 4px; margin-bottom: 24px; background: #f1f5f9; padding: 4px; border-radius: 12px; overflow-x: auto; flex-wrap: nowrap; }
+    .tab-btn { padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; font-size: 12px; background: transparent; color: #64748b; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
+    .tab-btn.active { background: #fff; color: #0f172a; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Section card ── */
+    .section-card { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .section-head { padding: 18px 24px 14px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: flex-start; gap: 12px; }
+    .section-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+    .section-head-text .title { font-weight: 700; font-size: 14px; color: #0f172a; }
+    .section-head-text .subtitle { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .section-body { padding: 20px 24px; }
+
+    /* ── Utility ── */
+    .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+    .lbl { font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+    .divider { height: 1px; background: #f1f5f9; margin: 20px 0; }
+
+    /* ── Example cards ── */
+    .example-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
+    .example-card.fail { border-left: 3px solid #ef4444; }
+    .example-card.pass { border-left: 3px solid #10b981; }
+
+    /* ── Code block ── */
+    .code-wrap { background: #0f172a; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+    .code-bar { background: #1e293b; padding: 8px 14px; display: flex; align-items: center; gap: 6px; }
+    .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .code-label { font-size: 11px; color: #64748b; font-family: monospace; margin-left: 6px; }
+    .code-body { padding: 14px 18px; font-family: monospace; font-size: 12px; color: #e2e8f0; line-height: 1.7; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+
+    /* ── Metric tier pills ── */
+    .tier-must  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .tier-should{ background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .tier-could { background: #f0f9ff; color: #0c4a6e; border: 1px solid #bae6fd; }
+
+    /* ── RAG dot ── */
+    .rag-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Scorecard table ── */
+    .sc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .sc-table th { padding: 9px 14px; text-align: left; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
+    .sc-table td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+
+    /* ── Warning banner ── */
+    #file-warning { display: none; background: #fff7ed; border-bottom: 2px solid #fb923c; padding: 12px 40px; font-size: 13px; color: #7c2d12; align-items: flex-start; gap: 12px; line-height: 1.6; }
+    #file-warning code { background: #1e293b; color: #7dd3fc; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 640px) {
+      .header { padding: 0 16px; }
+      .main { padding: 20px 14px; }
+      .hero h1 { font-size: 26px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="header-logo">⚖️</div>
+    <div>
+      <div class="header-title">EvalArchitect</div>
+      <div class="header-sub">AI Eval PRD Generator — for Product Managers</div>
+    </div>
+  </div>
+  <div class="header-right"><span>Powered by Claude</span></div>
+</div>
+
+<div id="file-warning">
+  <span style="font-size:18px;flex-shrink:0">⚠️</span>
+  <div>
+    <strong>Opening as local file — API calls may be blocked.</strong> Serve via local server:<br>
+    1. Open Terminal in this folder &nbsp;2. Run: <code>python3 -m http.server 8080</code> &nbsp;3. Open: <code>http://localhost:8080/EvalArchitect.html</code>
+  </div>
+</div>
+
+
+<div id="key-modal-overlay" style="display:none">
+  <div id="key-modal">
+    <div class="modal-icon">⚖️</div>
+    <h2>Welcome to EvalArchitect</h2>
+    <p class="modal-desc">Enter your Anthropic API key to get started. It's stored locally in your browser and never leaves your device.</p>
+    <div class="modal-error" id="modal-error">Please enter a valid key starting with <code>sk-</code></div>
+    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off" />
+    <button class="modal-btn" onclick="saveApiKey()">Save & Start →</button>
+    <div class="modal-hint">Stored in <strong>localStorage</strong> only — never shared. &nbsp;<a href="https://console.anthropic.com/keys" target="_blank">Get your key →</a></div>
+  </div>
+</div>
+
+<div id="settings-btn" title="Change API key" onclick="openSettings()">⚙️</div>
+
+<div class="main">
+  <div class="hero" id="hero-section">
+    <div class="hero-pill">Eval PRD Generator</div>
+    <h1>Turn a feature idea into<br>a complete Eval PRD</h1>
+    <p>Paste your feature requirement. Get a production-ready evaluation document — clear for engineers, readable by stakeholders, with every relevant metric surfaced.</p>
+  </div>
+
+  <div class="input-card">
+    <h3 id="input-title">Describe your AI feature</h3>
+    <p>Include the user persona, their goal, the AI's role, key constraints, and any known failure risks. More context = more precise eval framework.</p>
+    <textarea id="feature-input" placeholder="E.g. An AI assistant embedded in our B2B SaaS product that helps non-technical business analysts write SQL queries in plain English. Users describe what they want to know from the data, and the AI generates the SQL, explains what it does, and flags if the query might be slow or expensive. Users have read-only access to a Postgres database with ~50 tables..."></textarea>
+    <div class="examples-label">Try an example</div>
+    <div class="examples-row" id="examples-row"></div>
+    <div class="btn-row">
+      <button id="generate-btn" onclick="handleGenerate()">Generate Eval PRD →</button>
+    </div>
+  </div>
+
+  <div id="loading-card">
+    <div class="icon">⚖️</div>
+    <h3>Generating your Eval PRD...</h3>
+    <p>Defining quality, surfacing metrics, writing acceptance criteria</p>
+    <div class="loading-pills">
+      <span class="loading-pill">Analyzing feature context</span>
+      <span class="loading-pill">Defining quality philosophy</span>
+      <span class="loading-pill">Writing acceptance criteria</span>
+      <span class="loading-pill">Surfacing all metrics</span>
+      <span class="loading-pill">Setting launch gates</span>
+      <span class="loading-pill">Preparing handoff brief</span>
+    </div>
+  </div>
+
+  <div id="error-card">
+    <div class="err-title">Generation failed</div>
+    <div class="err-msg" id="error-msg"></div>
+  </div>
+
+  <div id="result-area"></div>
+</div>
+
+<script>
+// ─── Examples ─────────────────────────────────────────────────────────────────
+const EXAMPLES = [
+  "AI customer support chatbot that handles refunds, order tracking, and product questions for a DTC e-commerce brand. Users are frustrated customers who want fast resolution. The AI must know when to escalate to a human agent.",
+  "Smart email drafting assistant for B2B sales reps. It reads a prospect's LinkedIn profile and recent company news, then suggests a personalised cold outreach email. Reps can edit before sending.",
+  "AI code reviewer that automatically reviews GitHub pull requests and posts inline comments with suggestions. Used by a team of 20 engineers shipping production code daily.",
+  "Medical symptom checker that helps patients understand their symptoms and decide whether to seek care. Deployed in a consumer health app with 500k monthly users. Must never diagnose.",
+];
+
+// ─── System Prompt ─────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are an expert AI Product Evaluation Architect. A Product Manager will describe an AI feature. You produce a comprehensive Eval PRD — an Evaluation Product Requirements Document — that is clear for engineers to implement and readable by non-technical stakeholders.
+
+CRITICAL OUTPUT RULES:
+- Output ONLY a valid JSON object. Zero markdown fences, zero preamble, zero explanation after.
+- String values must be specific to this feature, not generic. Avoid boilerplate.
+- Keep individual string fields to 1-3 sentences. Be precise, not exhaustive.
+- The codeScaffold field is the ONLY exception — write 25-40 lines of real runnable Python code.
+- Never use the word "straightforward" or "robust" in any string.
+
+OUTPUT THIS EXACT JSON STRUCTURE:
+
+{
+  "featureName": "string",
+  "featureSummary": "string - one sentence, plain English, what the AI does and for whom",
+  "version": "v1.0",
+  "prdDate": "string - today date",
+  "riskLevel": "Low | Medium | High | Critical",
+  "featureType": "Chatbot | RAG System | Autonomous Agent | Classifier | Recommender | Code Assistant | Content Generator | Data Analyst | Search | Other",
+
+  "featureContext": {
+    "userPersona": "string - who uses this, their technical level, their goal",
+    "userJourney": "string - the step-by-step journey the user takes, and exactly where the AI intervenes",
+    "aiRole": "string - what the AI does, what it does NOT do",
+    "deploymentContext": "string - where is this deployed, what oversight exists, what decisions does the user make based on AI output",
+    "successDefinition": "string - in plain English, what does a successful AI interaction look like for this user",
+    "constraints": ["string - hard technical, legal, or product constraints the AI must operate within"],
+    "regulatoryConsiderations": ["string - relevant regulations e.g. GDPR, HIPAA, EU AI Act, none if not applicable"]
+  },
+
+  "qualityPhilosophy": {
+    "stance": "string - the single most important quality property for this feature e.g. Never wrong over Sometimes helpful, or Always helpful over Occasionally cautious",
+    "rationale": "string - why this stance is right for this user and deployment context",
+    "primaryTradeoff": "string - the core quality tradeoff this feature must navigate e.g. precision vs recall, helpfulness vs safety",
+    "acceptableFailureRate": "string - how often the AI can fail before users lose trust, and what type of failures are tolerable vs intolerable",
+    "qualityPrinciples": ["string - 3 guiding principles that should drive every eval decision for this feature"]
+  },
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "userStory": "string - Given [context], when [user action], the AI must [behaviour], so that [outcome]",
+      "measurable": "string - the specific measurable condition that proves this criterion is met",
+      "testApproach": "string - how this criterion will be tested",
+      "priority": "Must | Should | Could",
+      "launchGate": true
+    }
+  ],
+
+  "whatGoodLooksLike": {
+    "goldenExamples": [
+      {
+        "scenario": "string - the situation",
+        "input": "string - what the user said or provided",
+        "idealOutput": "string - what the AI should produce",
+        "whyGood": "string - which quality principle this satisfies and why",
+        "antiPattern": "string - the common wrong output that looks right but fails"
+      }
+    ],
+    "failureExamples": [
+      {
+        "scenario": "string",
+        "input": "string",
+        "badOutput": "string",
+        "whyBad": "string - which quality principle is violated",
+        "businessImpact": "string - real consequence if this happens in production"
+      }
+    ],
+    "hardConstraints": ["string - things the AI must NEVER do, absolute lines"]
+  },
+
+  "evalScope": {
+    "inScope": ["string - 4 things explicitly covered by this eval framework"],
+    "outOfScope": ["string - 4 things explicitly NOT evaluated in v1 and why"],
+    "openQuestions": [
+      {"question": "string - something not yet decided that blocks or affects eval design", "impact": "string - what breaks or gets delayed if this stays unanswered", "owner": "string - who must resolve this"}
+    ],
+    "assumptions": [
+      {"assumption": "string", "ifWrong": "string - what breaks", "validationMethod": "string"}
+    ]
+  },
+
+  "metricsFramework": {
+    "mustMeasure": [
+      {
+        "name": "string",
+        "category": "Business | User Experience | Technical | Safety | Operational | Fairness | User Behavior",
+        "definition": "string - what this measures in plain English",
+        "formula": "string - real mathematical formula",
+        "target": "string - the specific number or range you are aiming for",
+        "minimumAcceptable": "string - below this = do not launch",
+        "measurementMethod": "string - exactly how to measure this",
+        "whyMustMeasure": "string - why missing this metric is a launch risk",
+        "leadingOrLagging": "Leading | Lagging",
+        "pmRelevance": "string - why a PM specifically should care about this metric"
+      }
+    ],
+    "shouldMeasure": [
+      {
+        "name": "string",
+        "category": "Business | User Experience | Technical | Safety | Operational | Fairness | User Behavior",
+        "definition": "string",
+        "formula": "string",
+        "target": "string",
+        "measurementMethod": "string",
+        "whenItMatters": "string - at what stage of product lifecycle this becomes critical",
+        "leadingOrLagging": "Leading | Lagging"
+      }
+    ],
+    "couldMeasure": [
+      {
+        "name": "string",
+        "category": "Business | User Experience | Technical | Safety | Operational | Fairness | User Behavior",
+        "definition": "string",
+        "formula": "string",
+        "whenToAdd": "string - what signal would prompt you to add this metric",
+        "leadingOrLagging": "Leading | Lagging"
+      }
+    ]
+  },
+
+  "evalDataset": {
+    "totalRecommendedSize": 150,
+    "rationale": "string - why this size and composition",
+    "buckets": [
+      {
+        "name": "string",
+        "percentage": 35,
+        "count": 52,
+        "description": "string",
+        "examples": [
+          {"input": "string", "expectedBehavior": "string", "whyIncluded": "string"}
+        ]
+      }
+    ],
+    "dataCollectionStrategy": "string - where to get real examples from",
+    "refreshCadence": "string - how often to update the dataset and what triggers a refresh"
+  },
+
+  "gradersAndMeasurement": {
+    "approachSummary": "string - overall measurement strategy for this feature",
+    "graders": [
+      {
+        "dimension": "string",
+        "graderType": "Code-based | LLM-as-Judge | Human | Hybrid",
+        "rationale": "string - why this grader type for this dimension",
+        "implementation": "string - concise description of how to implement",
+        "rubric": {"5": "string", "4": "string", "3": "string", "2": "string", "1": "string"},
+        "judgePrompt": "string - the actual LLM judge prompt if applicable, else null",
+        "validationRequired": "string - how to validate this grader is measuring the right thing"
+      }
+    ]
+  },
+
+  "launchGates": {
+    "philosophy": "string - how to think about the launch gate decision for this feature",
+    "milestones": [
+      {
+        "milestone": "string - e.g. Alpha | Beta | GA",
+        "description": "string - what this milestone means",
+        "gates": [
+          {"metric": "string", "threshold": "string", "current": "Not measured", "status": "Not Started"}
+        ]
+      }
+    ],
+    "goNoGoFramework": "string - the decision framework for the final go/no-go call. If X and Y then Go. If Z then No-Go.",
+    "postLaunchMonitoring": ["string - 3 key things to monitor in the first 30 days after launch"]
+  },
+
+  "launchScorecard": {
+    "overallReadiness": "Not Started",
+    "recommendation": "string - plain-English go/no-go recommendation written for a VP or CPO. Opinionated. 2 sentences.",
+    "executiveSummary": "string - 3 sentences: what the feature does, what quality level it must achieve, what must happen before launch",
+    "costOfPoorQuality": "string - what goes wrong for users and the business if this ships below the quality bar",
+    "costOfDelay": "string - what is lost by delaying launch or over-engineering evals",
+    "evalInvestment": "string - estimated engineering time and cost to run this full eval suite",
+    "topRisks": [
+      {"risk": "string", "likelihood": "Low | Medium | High", "mitigation": "string"}
+    ],
+    "nonNegotiables": ["string - 3 to 5 absolute blockers that must be resolved before any launch"],
+    "stakeholderFAQ": [
+      {"question": "string - question a non-technical stakeholder would ask", "answer": "string - clear, jargon-free answer"}
+    ]
+  },
+
+  "engineeringHandoff": {
+    "systemPromptTemplate": "string - a realistic working system prompt template with [PLACEHOLDERS] for dynamic content",
+    "inputSchema": "string - exact description of the input format the model receives",
+    "outputSchema": "string - exact description of the required output format",
+    "latencyBudget": "string - e.g. P95 < 3s, P99 < 8s",
+    "tokenBudget": "string - estimated input + output tokens per call",
+    "dependencies": [
+      {"name": "string", "type": "LLM | Vector DB | API | Database | Cache", "purpose": "string", "mockStrategy": "string"}
+    ],
+    "codeScaffold": "string - 25-40 lines of REAL runnable Python eval harness code, specific to this feature. Include imports, a test case class, a score function, an assertion, and a main runner. Use actual eval logic not pseudocode.",
+    "fixtureExample": "string - one complete JSON test fixture row for this feature",
+    "promptVersioningStrategy": "string - how to version prompts alongside eval results"
+  },
+
+  "assumptionsAndRisks": {
+    "coreAssumptions": [
+      {"assumption": "string", "ifWrong": "string", "validationMethod": "string", "owner": "string"}
+    ],
+    "knownUnknowns": [
+      {"unknown": "string", "impact": "High | Medium | Low", "resolutionPath": "string"}
+    ],
+    "evalLimitations": ["string - honest blind spots in this eval framework"],
+    "decisionLog": [
+      {"decision": "string", "rationale": "string", "tradeoff": "string"}
+    ]
+  }
+}
+
+COUNTS AND QUALITY RULES:
+- acceptanceCriteria: exactly 5, mix of Must/Should/Could, at least 3 with launchGate:true
+- goldenExamples: exactly 4, covering different scenarios
+- failureExamples: exactly 3, each with a different type of failure
+- hardConstraints: exactly 5
+- mustMeasure: exactly 5 metrics spanning at least 4 different categories — these are the launch-critical ones
+- shouldMeasure: exactly 7 metrics — quality indicators worth tracking but not blockers
+- couldMeasure: exactly 8 metrics across all 7 categories including Fairness and User Behavior — the complete catalogue
+- evalDataset.buckets: exactly 4 buckets totaling 150 cases with 2 examples each
+- graders: exactly 4, covering different grader types
+- launchGates.milestones: exactly 3 (Alpha, Beta, GA), each with 3 specific gates
+- topRisks: exactly 3
+- nonNegotiables: exactly 4
+- stakeholderFAQ: exactly 4 questions
+- coreAssumptions: exactly 4
+- knownUnknowns: exactly 3
+- evalLimitations: exactly 3
+- decisionLog: exactly 3
+
+FOR METRICS — be specific and differentiated:
+- mustMeasure must include at least one from: Safety, Fairness, or User Behavior
+- couldMeasure must include at least 2 Fairness metrics and 2 User Behavior metrics
+- All formulas must be real mathematical expressions, not descriptions
+- leadingOrLagging must be accurate: output quality metrics are usually Lagging, engagement/correction metrics are Leading
+
+FOR codeScaffold — write REAL Python, not pseudocode:
+- Import dataclasses, json, typing
+- Define a TestCase dataclass
+- Write a score_output() function with real scoring logic for THIS feature
+- Write a run_eval() function
+- Include at least one real assertion
+- Make it specific to the feature described, not generic`;
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const RISK_COLOR  = { Low:'#10b981', Medium:'#f59e0b', High:'#ef4444', Critical:'#7c3aed' };
+const RISK_BG     = { Low:'#f0fdf4', Medium:'#fffbeb', High:'#fef2f2', Critical:'#f5f3ff' };
+const PRIO_COLOR  = { Must:'#ef4444', Should:'#f59e0b', Could:'#3b82f6' };
+const PRIO_BG     = { Must:'#fef2f2', Should:'#fffbeb', Could:'#eff6ff' };
+const CAT_META    = {
+  'Business':       { icon:'💼', accent:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd', text:'#0c4a6e' },
+  'User Experience':{ icon:'👤', accent:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95' },
+  'Technical':      { icon:'⚙️', accent:'#10b981', bg:'#f0fdf4', border:'#bbf7d0', text:'#064e3b' },
+  'Safety':         { icon:'🛡️', accent:'#ef4444', bg:'#fef2f2', border:'#fecaca', text:'#7f1d1d' },
+  'Operational':    { icon:'⚡', accent:'#f59e0b', bg:'#fffbeb', border:'#fde68a', text:'#78350f' },
+  'Fairness':       { icon:'⚖️', accent:'#6366f1', bg:'#eef2ff', border:'#c7d2fe', text:'#3730a3' },
+  'User Behavior':  { icon:'🔍', accent:'#ec4899', bg:'#fdf2f8', border:'#fbcfe8', text:'#831843' },
+};
+const GRADER_COLOR = { 'Code-based':'#10b981','LLM-as-Judge':'#8b5cf6','Human':'#f59e0b','Hybrid':'#3b82f6' };
+const RAG_DOT  = { green:'#10b981', amber:'#f59e0b', red:'#ef4444' };
+const RAG_BG   = { green:'#f0fdf4', amber:'#fffbeb', red:'#fef2f2' };
+const RAG_BDR  = { green:'#bbf7d0', amber:'#fde68a', red:'#fecaca' };
+
+// ─── API Key ──────────────────────────────────────────────────────────────────
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const err = document.getElementById('modal-error');
+  if (!key.startsWith('sk-')) { err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  localStorage.setItem('eval_architect_api_key', key);
+  document.getElementById('key-modal-overlay').style.display = 'none';
+}
+function openSettings() {
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('key-modal-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('api-key-input').focus(), 50);
+}
+function getApiKey() { return localStorage.getItem('eval_architect_api_key') || ''; }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (!getApiKey()) {
+    document.getElementById('key-modal-overlay').style.display = 'flex';
+    setTimeout(() => document.getElementById('api-key-input').focus(), 100);
+  }
+  document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveApiKey(); });
+  const row = document.getElementById('examples-row');
+  EXAMPLES.forEach(ex => {
+    const btn = document.createElement('button');
+    btn.className = 'example-chip';
+    btn.textContent = ex.slice(0, 60) + '…';
+    btn.onclick = () => { document.getElementById('feature-input').value = ex; };
+    row.appendChild(btn);
+  });
+});
+
+// ─── JSON repair ──────────────────────────────────────────────────────────────
+function repairJson(s) {
+  s = s.trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) s = fence[1].trim();
+  const first = s.indexOf('{'), last = s.lastIndexOf('}');
+  if (first !== -1 && last !== -1) s = s.slice(first, last + 1);
+  try { JSON.parse(s); return s; } catch(_) {}
+  // Balance braces
+  let open = 0;
+  for (const c of s) { if (c==='{') open++; else if (c==='}') open--; }
+  if (open > 0) s += '}'.repeat(open);
+  return s;
+}
+
+// ─── Generate ────────────────────────────────────────────────────────────────
+async function handleGenerate() {
+  const desc = document.getElementById('feature-input').value.trim();
+  if (!desc) { alert('Please describe your AI feature first.'); return; }
+  const apiKey = getApiKey();
+  if (!apiKey) { openSettings(); return; }
+
+  document.getElementById('generate-btn').disabled = true;
+  document.getElementById('generate-btn').innerHTML = '<span class="spinner">⟳</span> Generating...';
+  document.getElementById('loading-card').style.display = 'block';
+  document.getElementById('error-card').style.display = 'none';
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('hero-section').style.display = 'none';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: `Generate a complete Eval PRD for this AI feature:\n\n${desc}\n\nOutput ONLY valid JSON — no markdown, no preamble.` }],
+      }),
+    });
+
+    const body = await res.json();
+    if (!res.ok) {
+      const msg = body?.error?.message || JSON.stringify(body);
+      if (res.status === 401) throw new Error('Invalid API key. Click ⚙️ to update it.');
+      if (res.status === 529 || res.status === 503) throw new Error('Claude is overloaded. Please try again in a moment.');
+      throw new Error(`API error ${res.status}: ${msg}`);
+    }
+
+    const raw = (body.content || []).map(b => b.text || '').join('');
+    const fixed = repairJson(raw);
+    let data;
+    try { data = JSON.parse(fixed); }
+    catch(e) { throw new Error('Could not parse response JSON. Try again — Claude occasionally truncates long responses.'); }
+
+    renderResult(data);
+  } catch (err) {
+    document.getElementById('error-card').style.display = 'block';
+    document.getElementById('error-msg').textContent = err.message;
+  } finally {
+    document.getElementById('loading-card').style.display = 'none';
+    document.getElementById('generate-btn').disabled = false;
+    document.getElementById('generate-btn').innerHTML = 'Regenerate →';
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function badge(label, extraClass, style) {
+  return `<span class="badge ${extraClass||''}" style="${style||''}">${esc(label)}</span>`;
+}
+function lbl(t) { return `<div class="lbl">${esc(t)}</div>`; }
+function bodyTxt(t, style) { return `<div style="font-size:13px;color:#334155;line-height:1.6;${style||''}">${esc(t)}</div>`; }
+function infoCard(html, style) { return `<div class="info-card" style="${style||''}">${html}</div>`; }
+function pill(label, color, bg, border) {
+  return `<span style="display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;background:${bg};color:${color};border:1px solid ${border||color+'30'}">${esc(label)}</span>`;
+}
+function sCard(icon, title, subtitle, accent, body) {
+  return `<div class="section-card">
+    <div class="section-head" style="background:linear-gradient(135deg,${accent}08 0%,#fff 100%)">
+      <div class="section-icon" style="background:${accent}15">${icon}</div>
+      <div class="section-head-text">
+        <div class="title">${esc(title)}</div>
+        ${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ''}
+      </div>
+    </div>
+    <div class="section-body">${body}</div>
+  </div>`;
+}
+function codeBlock(code, label) {
+  return `<div class="code-wrap">
+    <div class="code-bar">
+      <div class="code-dot" style="background:#ef4444"></div>
+      <div class="code-dot" style="background:#f59e0b"></div>
+      <div class="code-dot" style="background:#10b981"></div>
+      <span class="code-label">${esc(label)}</span>
+    </div>
+    <div class="code-body">${esc(code)}</div>
+  </div>`;
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── Render root ─────────────────────────────────────────────────────────────
+function renderResult(d) {
+  const area = document.getElementById('result-area');
+  area.style.display = 'block';
+
+  const rc = RISK_COLOR[d.riskLevel] || '#64748b';
+  const rb = RISK_BG[d.riskLevel] || '#f8fafc';
+
+  let html = `
+  <div class="feature-banner">
+    <div class="doc-label">Eval PRD — ${esc(d.version||'v1.0')} &nbsp;·&nbsp; ${esc(d.prdDate||'')}</div>
+    <h2>${esc(d.featureName)}</h2>
+    <div class="summary">${esc(d.featureSummary)}</div>
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
+      <span style="background:${rb};color:${rc};border:1px solid ${rc}30;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700">${esc(d.riskLevel)} Risk</span>
+      <span style="background:rgba(255,255,255,0.1);color:#94a3b8;border:1px solid rgba(255,255,255,0.12);padding:4px 14px;border-radius:99px;font-size:12px;font-weight:600">${esc(d.featureType)}</span>
+    </div>
+  </div>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="switchTab('context',this)">🗺️ Context</button>
+    <button class="tab-btn" onclick="switchTab('philosophy',this)">🧭 Quality Philosophy</button>
+    <button class="tab-btn" onclick="switchTab('criteria',this)">✅ Acceptance Criteria</button>
+    <button class="tab-btn" onclick="switchTab('goodbad',this)">🎯 Good vs Bad</button>
+    <button class="tab-btn" onclick="switchTab('scope',this)">🔎 Scope</button>
+    <button class="tab-btn" onclick="switchTab('metrics',this)">📊 All Metrics</button>
+    <button class="tab-btn" onclick="switchTab('dataset',this)">🗂️ Dataset</button>
+    <button class="tab-btn" onclick="switchTab('graders',this)">⚖️ Graders</button>
+    <button class="tab-btn" onclick="switchTab('gates',this)">🚦 Launch Gates</button>
+    <button class="tab-btn" onclick="switchTab('scorecard',this)">📋 Scorecard</button>
+    <button class="tab-btn" onclick="switchTab('handoff',this)">💻 Eng Handoff</button>
+    <button class="tab-btn" onclick="switchTab('risks',this)">⚠️ Risks</button>
+  </div>`;
+
+  html += `<div id="tab-context"    class="tab-content active">${renderContext(d)}</div>`;
+  html += `<div id="tab-philosophy" class="tab-content">${renderPhilosophy(d)}</div>`;
+  html += `<div id="tab-criteria"   class="tab-content">${renderCriteria(d)}</div>`;
+  html += `<div id="tab-goodbad"    class="tab-content">${renderGoodBad(d)}</div>`;
+  html += `<div id="tab-scope"      class="tab-content">${renderScope(d)}</div>`;
+  html += `<div id="tab-metrics"    class="tab-content">${renderMetrics(d)}</div>`;
+  html += `<div id="tab-dataset"    class="tab-content">${renderDataset(d)}</div>`;
+  html += `<div id="tab-graders"    class="tab-content">${renderGraders(d)}</div>`;
+  html += `<div id="tab-gates"      class="tab-content">${renderGates(d)}</div>`;
+  html += `<div id="tab-scorecard"  class="tab-content">${renderScorecard(d)}</div>`;
+  html += `<div id="tab-handoff"    class="tab-content">${renderHandoff(d)}</div>`;
+  html += `<div id="tab-risks"      class="tab-content">${renderRisks(d)}</div>`;
+
+  area.innerHTML = html;
+  window.scrollTo({ top: area.offsetTop - 80, behavior: 'smooth' });
+}
+
+// ── 1. Feature Context ────────────────────────────────────────────────────────
+function renderContext(d) {
+  const fc = d.featureContext || {};
+  const constraints = (fc.constraints||[]).map(c =>
+    `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 12px;background:#fef2f2;border-radius:8px;margin-bottom:6px">
+      <span style="color:#ef4444;font-weight:700;flex-shrink:0">✕</span>
+      <span style="font-size:13px;color:#7f1d1d;line-height:1.5">${esc(c)}</span>
+    </div>`).join('');
+  const regs = (fc.regulatoryConsiderations||[]).map(r =>
+    `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 12px;background:#eef2ff;border-radius:8px;margin-bottom:6px">
+      <span style="color:#6366f1;font-weight:700;flex-shrink:0">§</span>
+      <span style="font-size:13px;color:#3730a3;line-height:1.5">${esc(r)}</span>
+    </div>`).join('');
+
+  return sCard('🗺️','Feature Context & User Journey','Who uses this, what they need, where the AI fits','#0ea5e9',`
+    <div class="grid-2" style="margin-bottom:20px">
+      <div>
+        ${lbl('User Persona')}
+        ${infoCard(bodyTxt(fc.userPersona),'margin-bottom:14px')}
+        ${lbl('AI Role (and Non-Role)')}
+        ${infoCard(bodyTxt(fc.aiRole),'margin-bottom:14px')}
+        ${lbl('Success Definition')}
+        ${infoCard(bodyTxt(fc.successDefinition),'background:#f0fdf4;border-color:#bbf7d0')}
+      </div>
+      <div>
+        ${lbl('User Journey — Where AI Intervenes')}
+        ${infoCard(bodyTxt(fc.userJourney),'margin-bottom:14px;background:#f5f3ff;border-color:#ddd6fe')}
+        ${lbl('Deployment Context & Oversight')}
+        ${infoCard(bodyTxt(fc.deploymentContext))}
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>${lbl('Hard Constraints')}${constraints||bodyTxt('None specified')}</div>
+      <div>${lbl('Regulatory Considerations')}${regs||bodyTxt('None identified')}</div>
+    </div>`
+  );
+}
+
+// ── 2. Quality Philosophy ─────────────────────────────────────────────────────
+function renderPhilosophy(d) {
+  const qp = d.qualityPhilosophy || {};
+  const principles = (qp.qualityPrinciples||[]).map((p,i) =>
+    `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 16px;background:#f8fafc;border-radius:10px;margin-bottom:8px">
+      <div style="width:24px;height:24px;background:#0f172a;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</div>
+      <div style="font-size:13px;color:#334155;line-height:1.6;font-weight:500">${esc(p)}</div>
+    </div>`).join('');
+
+  return sCard('🧭','Quality Philosophy','The guiding stance that drives every eval decision','#8b5cf6',`
+    <div style="background:linear-gradient(135deg,#f5f3ff,#eef2ff);border:2px solid #c7d2fe;border-radius:14px;padding:20px 24px;margin-bottom:20px;text-align:center">
+      <div style="font-size:11px;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Core Quality Stance</div>
+      <div style="font-size:20px;font-weight:800;color:#3730a3;line-height:1.3">${esc(qp.stance)}</div>
+    </div>
+    <div class="grid-2" style="margin-bottom:20px">
+      <div>
+        ${lbl('Why This Stance')}
+        ${infoCard(bodyTxt(qp.rationale),'margin-bottom:14px')}
+        ${lbl('Acceptable Failure Rate')}
+        ${infoCard(bodyTxt(qp.acceptableFailureRate),'background:#fffbeb;border-color:#fde68a')}
+      </div>
+      <div>
+        ${lbl('Primary Quality Tradeoff')}
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px;margin-bottom:14px">
+          <div style="font-size:22px;text-align:center;margin-bottom:8px">⚖️</div>
+          ${bodyTxt(qp.primaryTradeoff,'text-align:center;font-weight:600')}
+        </div>
+      </div>
+    </div>
+    ${lbl('Three Guiding Principles')}
+    ${principles}`
+  );
+}
+
+// ── 3. Acceptance Criteria ────────────────────────────────────────────────────
+function renderCriteria(d) {
+  const acs = d.acceptanceCriteria || [];
+  const gates = acs.filter(a => a.launchGate).length;
+  const cards = acs.map(ac => {
+    const pc = PRIO_COLOR[ac.priority] || '#64748b';
+    const pb = PRIO_BG[ac.priority] || '#f8fafc';
+    return `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:12px">
+      <div style="background:#f8fafc;padding:12px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:monospace;font-size:11px;font-weight:700;color:#94a3b8;background:#e2e8f0;padding:2px 8px;border-radius:6px">${esc(ac.id)}</span>
+          <span style="background:${pb};color:${pc};border:1px solid ${pc}30;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">${esc(ac.priority)}</span>
+          ${ac.launchGate ? `<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">🚦 Launch Gate</span>` : ''}
+        </div>
+        <span style="font-size:11px;color:#94a3b8">${esc(ac.testApproach)}</span>
+      </div>
+      <div style="padding:14px 18px">
+        <div style="font-size:13px;color:#0f172a;line-height:1.7;font-weight:500;margin-bottom:10px;padding:10px 14px;background:#f5f3ff;border-radius:8px;border-left:3px solid #8b5cf6">${esc(ac.userStory)}</div>
+        ${lbl('Measurable Condition')}
+        <div style="font-size:13px;color:#15803d;font-weight:600;padding:8px 12px;background:#f0fdf4;border-radius:8px">${esc(ac.measurable)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return sCard('✅','Acceptance Criteria','The unambiguous definition of done — written as testable user stories','#10b981',`
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:#15803d">${acs.length}</div>
+        <div style="font-size:11px;color:#166534;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Total Criteria</div>
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 18px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:#b91c1c">${gates}</div>
+        <div style="font-size:11px;color:#991b1b;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Launch Gates</div>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 18px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:#92400e">${acs.filter(a=>a.priority==='Must').length}</div>
+        <div style="font-size:11px;color:#78350f;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Must Have</div>
+      </div>
+    </div>
+    ${cards}`
+  );
+}
+
+// ── 4. Good vs Bad ────────────────────────────────────────────────────────────
+function renderGoodBad(d) {
+  const wb = d.whatGoodLooksLike || {};
+  const goldens = (wb.goldenExamples||[]).map((ex,i) => `
+    <div class="example-card pass" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">✓ Golden Example ${i+1}</span>
+        <span style="font-size:12px;color:#64748b">${esc(ex.scenario)}</span>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px">
+        <div>${lbl('Input')}${infoCard(bodyTxt(ex.input,'font-size:12px'))}</div>
+        <div>${lbl('Ideal Output')}${infoCard(bodyTxt(ex.idealOutput,'font-size:12px'),'background:#f0fdf4;border-color:#bbf7d0')}</div>
+      </div>
+      <div class="grid-2">
+        <div>${lbl('Why This Is Good')}${bodyTxt(ex.whyGood,'font-size:12px;color:#15803d;font-weight:500')}</div>
+        <div>${lbl('Common Anti-Pattern')}${bodyTxt(ex.antiPattern,'font-size:12px;color:#b45309')}</div>
+      </div>
+    </div>`).join('');
+
+  const fails = (wb.failureExamples||[]).map((ex,i) => `
+    <div class="example-card fail" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">✕ Failure ${i+1}</span>
+        <span style="font-size:12px;color:#64748b">${esc(ex.scenario)}</span>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px">
+        <div>${lbl('Input')}${infoCard(bodyTxt(ex.input,'font-size:12px'))}</div>
+        <div>${lbl('Bad Output')}${infoCard(bodyTxt(ex.badOutput,'font-size:12px'),'background:#fef2f2;border-color:#fecaca')}</div>
+      </div>
+      <div class="grid-2">
+        <div>${lbl('Why Bad')}${bodyTxt(ex.whyBad,'font-size:12px;color:#b91c1c;font-weight:500')}</div>
+        <div>${lbl('Business Impact')}${bodyTxt(ex.businessImpact,'font-size:12px;color:#7f1d1d;font-weight:600')}</div>
+      </div>
+    </div>`).join('');
+
+  const constraints = (wb.hardConstraints||[]).map(c =>
+    `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:8px">
+      <span style="color:#ef4444;font-weight:800;flex-shrink:0">NEVER</span>
+      <span style="font-size:13px;color:#7f1d1d;line-height:1.5;font-weight:600">${esc(c)}</span>
+    </div>`).join('');
+
+  return `
+    ${sCard('✅','Golden Examples','What good looks like — with reasoning and anti-patterns','#10b981', goldens)}
+    ${sCard('✕','Failure Examples','What bad looks like — and the real business impact','#ef4444', fails)}
+    ${sCard('🚫','Hard Constraints','Absolute lines the AI must never cross','#0f172a', constraints)}`;
+}
+
+// ── 5. Eval Scope ─────────────────────────────────────────────────────────────
+function renderScope(d) {
+  const sc = d.evalScope || {};
+  const inScope = (sc.inScope||[]).map(s =>
+    `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 12px;background:#f0fdf4;border-radius:8px;margin-bottom:6px">
+      <span style="color:#10b981;font-weight:700;flex-shrink:0">✓</span>
+      <span style="font-size:13px;color:#166534;line-height:1.5">${esc(s)}</span>
+    </div>`).join('');
+
+  const outScope = (sc.outOfScope||[]).map(s =>
+    `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px">
+      <span style="color:#94a3b8;font-weight:700;flex-shrink:0">✕</span>
+      <span style="font-size:13px;color:#64748b;line-height:1.5">${esc(s)}</span>
+    </div>`).join('');
+
+  const openQs = (sc.openQuestions||[]).map((q,i) => `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:10px">
+      <div style="background:#fffbeb;padding:10px 16px;border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="font-weight:700;font-size:13px;color:#92400e">❓ ${esc(q.question)}</div>
+        <span style="font-size:11px;color:#b45309;background:#fff;border:1px solid #fde68a;padding:2px 8px;border-radius:99px;white-space:nowrap;font-weight:600">Owner: ${esc(q.owner)}</span>
+      </div>
+      <div style="padding:10px 16px;font-size:12px;color:#78350f;line-height:1.5">Impact if unresolved: ${esc(q.impact)}</div>
+    </div>`).join('');
+
+  const assumptions = (sc.assumptions||[]).map(a => `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="font-weight:600;font-size:13px;color:#0f172a;margin-bottom:8px">${esc(a.assumption)}</div>
+      <div class="grid-2">
+        <div style="font-size:12px;color:#b91c1c"><span style="font-weight:700">If wrong:</span> ${esc(a.ifWrong)}</div>
+        <div style="font-size:12px;color:#166534"><span style="font-weight:700">Validate by:</span> ${esc(a.validationMethod)}</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="grid-2" style="margin-bottom:0">
+      ${sCard('✓','In Scope','What this eval framework covers','#10b981', inScope)}
+      ${sCard('✕','Out of Scope (v1)','Explicitly not evaluated now — and why','#94a3b8', outScope)}
+    </div>
+    ${sCard('❓','Open Questions','Decisions that must be made before eval design is complete','#f59e0b', openQs)}
+    ${sCard('🔍','Assumptions','What we are assuming — and what breaks if wrong','#6366f1', assumptions)}`;
+}
+
+// ── 6. Metrics Framework ─────────────────────────────────────────────────────
+function renderMetrics(d) {
+  const mf = d.metricsFramework || {};
+  const must   = mf.mustMeasure   || [];
+  const should = mf.shouldMeasure || [];
+  const could  = mf.couldMeasure  || [];
+
+  function catMeta(cat) { return CAT_META[cat] || { icon:'📊', accent:'#64748b', bg:'#f8fafc', border:'#e2e8f0', text:'#334155' }; }
+
+  function metricCard(m, tierClass, tierLabel) {
+    const cm = catMeta(m.category);
+    return `
+    <div style="background:${cm.bg};border:1px solid ${cm.border};border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="font-weight:700;font-size:13px;color:#0f172a;line-height:1.3">${cm.icon} ${esc(m.name)}</div>
+        <span class="badge ${tierClass}" style="flex-shrink:0">${tierLabel}</span>
+      </div>
+      <div style="font-size:12px;color:${cm.text};line-height:1.5">${esc(m.definition)}</div>
+      <div style="background:rgba(0,0,0,0.04);border-radius:6px;padding:5px 8px">
+        <code style="font-family:monospace;font-size:11px;color:${cm.accent};word-break:break-word">${esc(m.formula)}</code>
+      </div>
+      ${m.target ? `<div style="font-size:11px;font-weight:700;color:${cm.accent}">Target: ${esc(m.target)}${m.minimumAcceptable ? ' &nbsp;|&nbsp; Min: '+esc(m.minimumAcceptable) : ''}</div>` : ''}
+      ${m.measurementMethod ? `<div style="font-size:11px;color:#64748b;line-height:1.4"><span style="font-weight:700;color:#94a3b8;text-transform:uppercase;font-size:10px;letter-spacing:.06em">Measure: </span>${esc(m.measurementMethod)}</div>` : ''}
+      ${m.leadingOrLagging ? `<div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:#94a3b8;font-weight:600">${esc(m.leadingOrLagging)} Indicator</span>
+        ${m.category ? `<span style="font-size:10px;font-weight:700;color:${cm.accent};background:${cm.bg};padding:1px 6px;border-radius:4px;border:1px solid ${cm.border}">${esc(m.category)}</span>` : ''}
+      </div>` : ''}
+      ${m.whyMustMeasure ? `<div style="font-size:11px;color:#b45309;background:#fffbeb;border-radius:6px;padding:5px 8px;line-height:1.4"><span style="font-weight:700">Why critical: </span>${esc(m.whyMustMeasure)}</div>` : ''}
+      ${m.pmRelevance ? `<div style="font-size:11px;color:#4c1d95;background:#f5f3ff;border-radius:6px;padding:5px 8px;line-height:1.4"><span style="font-weight:700">PM view: </span>${esc(m.pmRelevance)}</div>` : ''}
+      ${m.whenItMatters ? `<div style="font-size:11px;color:#166534;background:#f0fdf4;border-radius:6px;padding:5px 8px;line-height:1.4"><span style="font-weight:700">When critical: </span>${esc(m.whenItMatters)}</div>` : ''}
+      ${m.whenToAdd ? `<div style="font-size:11px;color:#64748b;background:#f8fafc;border-radius:6px;padding:5px 8px;line-height:1.4"><span style="font-weight:700">Add when: </span>${esc(m.whenToAdd)}</div>` : ''}
+    </div>`;
+  }
+
+  // Summary header
+  const allCats = [...new Set([...must,...should,...could].map(m=>m.category))];
+  const catSummary = allCats.map(cat => {
+    const cm = catMeta(cat);
+    const total = [...must,...should,...could].filter(m=>m.category===cat).length;
+    return `<div style="background:${cm.bg};border:1px solid ${cm.border};border-radius:10px;padding:10px 14px;text-align:center">
+      <div style="font-size:18px;margin-bottom:2px">${cm.icon}</div>
+      <div style="font-size:18px;font-weight:800;color:${cm.accent}">${total}</div>
+      <div style="font-size:10px;font-weight:700;color:${cm.text};text-transform:uppercase;letter-spacing:.05em;line-height:1.3">${esc(cat)}</div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px;padding:20px 24px;margin-bottom:20px;color:#fff">
+      <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Metric Coverage</div>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+        <div style="text-align:center"><div style="font-size:28px;font-weight:800;color:#ef4444">${must.length}</div><div style="font-size:10px;color:#fca5a5;font-weight:700;text-transform:uppercase">Must Measure</div></div>
+        <div style="text-align:center"><div style="font-size:28px;font-weight:800;color:#f59e0b">${should.length}</div><div style="font-size:10px;color:#fde68a;font-weight:700;text-transform:uppercase">Should Measure</div></div>
+        <div style="text-align:center"><div style="font-size:28px;font-weight:800;color:#60a5fa">${could.length}</div><div style="font-size:10px;color:#93c5fd;font-weight:700;text-transform:uppercase">Could Measure</div></div>
+        <div style="text-align:center"><div style="font-size:28px;font-weight:800;color:#fff">${must.length+should.length+could.length}</div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Total</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${catSummary}</div>
+    </div>
+
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <span class="badge tier-must">🔴 Must Measure</span>
+      <span style="font-size:12px;color:#64748b">Launch-critical — these gate your release</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:24px">
+      ${must.map(m => metricCard(m,'tier-must','Must')).join('')}
+    </div>
+
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <span class="badge tier-should">🟡 Should Measure</span>
+      <span style="font-size:12px;color:#64748b">Quality indicators — track weekly, diagnose problems</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:24px">
+      ${should.map(m => metricCard(m,'tier-should','Should')).join('')}
+    </div>
+
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <span class="badge tier-could">🔵 Could Measure</span>
+      <span style="font-size:12px;color:#64748b">Complete catalogue — nothing missing, add as you scale</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${could.map(m => metricCard(m,'tier-could','Could')).join('')}
+    </div>`;
+}
+
+// ── 7. Dataset ────────────────────────────────────────────────────────────────
+function renderDataset(d) {
+  const ed = d.evalDataset || {};
+  const bucketColors = ['#6366f1','#10b981','#ef4444','#f59e0b'];
+  const buckets = (ed.buckets||[]).map((b,i) => {
+    const color = bucketColors[i] || '#64748b';
+    const exs = (b.examples||[]).map(ex => `
+      <div style="background:#f8fafc;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="font-size:12px;color:#64748b;margin-bottom:4px"><span style="font-weight:700;color:#0f172a">Input:</span> ${esc(ex.input)}</div>
+        <div style="font-size:12px;color:#166534;margin-bottom:4px"><span style="font-weight:700">Expected:</span> ${esc(ex.expectedBehavior)}</div>
+        ${ex.whyIncluded ? `<div style="font-size:11px;color:#94a3b8;font-style:italic">Why included: ${esc(ex.whyIncluded)}</div>` : ''}
+      </div>`).join('');
+    return `
+    <div style="background:#fff;border:2px solid ${color}20;border-radius:14px;overflow:hidden;margin-bottom:14px">
+      <div style="background:${color}08;border-bottom:1px solid ${color}15;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:700;font-size:14px;color:${color}">${esc(b.name)}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:13px;font-weight:800;color:${color}">${b.count||0} cases</span>
+          <span style="font-size:12px;color:#94a3b8">${b.percentage||0}%</span>
+        </div>
+      </div>
+      <div style="padding:14px 18px">
+        <div style="font-size:13px;color:#64748b;margin-bottom:10px">${esc(b.description)}</div>
+        ${exs}
+      </div>
+    </div>`;
+  }).join('');
+
+  return sCard('🗂️','Eval Dataset Blueprint',`Recommended: ${ed.totalRecommendedSize||150} test cases`,'#f59e0b',`
+    ${infoCard(bodyTxt(ed.rationale),'margin-bottom:16px;background:#fffbeb;border-color:#fde68a')}
+    ${buckets}
+    <div class="grid-2" style="margin-top:8px">
+      <div>${lbl('Data Collection Strategy')}${infoCard(bodyTxt(ed.dataCollectionStrategy))}</div>
+      <div>${lbl('Refresh Cadence')}${infoCard(bodyTxt(ed.refreshCadence))}</div>
+    </div>`
+  );
+}
+
+// ── 8. Graders ────────────────────────────────────────────────────────────────
+function renderGraders(d) {
+  const gm = d.gradersAndMeasurement || {};
+  const graders = (gm.graders||[]).map(g => {
+    const gc = GRADER_COLOR[g.graderType] || '#64748b';
+    const rubricRows = [5,4,3,2,1].filter(s => g.rubric && g.rubric[s]).map(s =>
+      `<tr>
+        <td style="padding:8px 12px;font-weight:800;font-size:13px;color:${s>=4?'#15803d':s===3?'#b45309':'#b91c1c'};width:40px;text-align:center">${s}</td>
+        <td style="padding:8px 12px;font-size:12px;color:#334155;line-height:1.5">${esc(g.rubric[s])}</td>
+      </tr>`).join('');
+    return `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:12px 18px;display:flex;align-items:center;gap:12px">
+        <span style="background:${gc}18;color:${gc};border:1px solid ${gc}30;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700">${esc(g.graderType)}</span>
+        <span style="font-weight:700;font-size:14px;color:#0f172a">${esc(g.dimension)}</span>
+      </div>
+      <div style="padding:16px 18px">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div>${lbl('Rationale')}${bodyTxt(g.rationale,'font-size:12px')}</div>
+          <div>${lbl('Implementation')}${bodyTxt(g.implementation,'font-size:12px;color:#6366f1')}</div>
+        </div>
+        ${g.judgePrompt && g.judgePrompt !== 'null' ? `${lbl('Judge Prompt')}${codeBlock(g.judgePrompt,'llm_judge_prompt')}` : ''}
+        ${rubricRows ? `${lbl('Scoring Rubric (1–5)')}
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px">
+          <tr style="background:#f8fafc"><th style="padding:6px 12px;text-align:center;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;width:40px;border-bottom:1px solid #e2e8f0">Score</th><th style="padding:6px 12px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Meaning</th></tr>
+          ${rubricRows}
+        </table>` : ''}
+        ${lbl('Validation Required')}
+        ${bodyTxt(g.validationRequired,'font-size:12px;color:#b45309')}
+      </div>
+    </div>`;
+  }).join('');
+
+  return sCard('⚖️','Graders & Measurement','How each quality dimension will be measured and validated','#8b5cf6',`
+    ${infoCard(bodyTxt(gm.approachSummary),'margin-bottom:20px;background:#f5f3ff;border-color:#ddd6fe')}
+    ${graders}`
+  );
+}
+
+// ── 9. Launch Gates ───────────────────────────────────────────────────────────
+function renderGates(d) {
+  const lg = d.launchGates || {};
+  const milestoneColors = ['#6366f1','#f59e0b','#10b981'];
+  const milestones = (lg.milestones||[]).map((m,i) => {
+    const color = milestoneColors[i] || '#64748b';
+    const gates = (m.gates||[]).map(g => {
+      const statusColor = { 'Ready':'#10b981','In Progress':'#f59e0b','At Risk':'#ef4444','Not Started':'#94a3b8' };
+      const sc2 = statusColor[g.status] || '#94a3b8';
+      return `<tr>
+        <td style="padding:10px 14px;font-weight:600;font-size:13px;color:#0f172a">${esc(g.metric)}</td>
+        <td style="padding:10px 14px;font-size:13px;color:#334155;font-family:monospace">${esc(g.threshold)}</td>
+        <td style="padding:10px 14px;font-size:12px;color:#64748b">${esc(g.current)}</td>
+        <td style="padding:10px 14px"><span style="color:${sc2};font-size:11px;font-weight:700">${esc(g.status)}</span></td>
+      </tr>`;
+    }).join('');
+    return `
+    <div style="background:#fff;border:2px solid ${color}25;border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <div style="background:${color}08;border-bottom:1px solid ${color}15;padding:12px 18px">
+        <div style="font-weight:800;font-size:15px;color:${color}">${esc(m.milestone)}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px">${esc(m.description)}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr style="background:#f8fafc"><th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Metric</th><th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Threshold</th><th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Current</th><th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Status</th></tr>
+        ${gates}
+      </table>
+    </div>`;
+  }).join('');
+
+  const monitoring = (lg.postLaunchMonitoring||[]).map((m,i) =>
+    `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:#f0fdf4;border-radius:8px;margin-bottom:8px">
+      <div style="width:22px;height:22px;background:#15803d;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</div>
+      <span style="font-size:13px;color:#166534;line-height:1.5">${esc(m)}</span>
+    </div>`).join('');
+
+  return sCard('🚦','Launch Gates & Milestones','The specific thresholds that gate each release milestone','#10b981',`
+    ${infoCard(bodyTxt(lg.philosophy),'margin-bottom:20px;background:#f0fdf4;border-color:#bbf7d0')}
+    ${milestones}
+    <div class="grid-2" style="margin-top:8px">
+      <div>
+        ${lbl('Go / No-Go Decision Framework')}
+        ${infoCard(bodyTxt(lg.goNoGoFramework),'background:#fffbeb;border-color:#fde68a')}
+      </div>
+      <div>
+        ${lbl('Post-Launch Monitoring — First 30 Days')}
+        ${monitoring}
+      </div>
+    </div>`
+  );
+}
+
+// ── 10. Launch Scorecard ──────────────────────────────────────────────────────
+function renderScorecard(d) {
+  const sc = d.launchScorecard || {};
+  const readinessColor = { 'Ready':'#10b981','In Progress':'#f59e0b','At Risk':'#ef4444','Not Started':'#94a3b8' };
+  const rc = readinessColor[sc.overallReadiness] || '#94a3b8';
+
+  const risks = (sc.topRisks||[]).map(r => {
+    const lc = { High:'#ef4444',Medium:'#f59e0b',Low:'#10b981' }[r.likelihood]||'#64748b';
+    const lb = { High:'#fef2f2',Medium:'#fffbeb',Low:'#f0fdf4' }[r.likelihood]||'#f8fafc';
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-weight:700;font-size:13px;color:#0f172a">${esc(r.risk)}</div>
+        <span style="background:${lb};color:${lc};border:1px solid ${lc}30;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">${esc(r.likelihood)}</span>
+      </div>
+      <div style="font-size:12px;color:#475569">↳ ${esc(r.mitigation)}</div>
+    </div>`;
+  }).join('');
+
+  const nonnegs = (sc.nonNegotiables||[]).map((n,i) =>
+    `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:8px">
+      <span style="color:#ef4444;font-weight:800;flex-shrink:0">${i+1}</span>
+      <span style="font-size:13px;color:#7f1d1d;font-weight:600;line-height:1.5">${esc(n)}</span>
+    </div>`).join('');
+
+  const faq = (sc.stakeholderFAQ||[]).map(q =>
+    `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:10px">
+      <div style="background:#f8fafc;padding:10px 16px;font-weight:700;font-size:13px;color:#0f172a;border-bottom:1px solid #e2e8f0">❓ ${esc(q.question)}</div>
+      <div style="padding:10px 16px;font-size:13px;color:#334155;line-height:1.6">${esc(q.answer)}</div>
+    </div>`).join('');
+
+  return `
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:24px 28px;margin-bottom:20px;color:#fff">
+      <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Overall Launch Readiness</div>
+      <div style="font-size:26px;font-weight:800;color:${rc};margin-bottom:8px">${esc(sc.overallReadiness||'Not Started')}</div>
+      <div style="font-size:13px;color:#cbd5e1;line-height:1.6;max-width:580px;margin-bottom:16px">${esc(sc.recommendation)}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px">
+          <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Eval Investment</div>
+          <div style="font-size:12px;color:#f1f5f9;font-weight:700">${esc(sc.evalInvestment)}</div>
+        </div>
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:10px 14px">
+          <div style="font-size:10px;color:#fca5a5;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Cost of Poor Quality</div>
+          <div style="font-size:12px;color:#fecaca;font-weight:700;max-width:220px">${esc((sc.costOfPoorQuality||'').slice(0,80))}${(sc.costOfPoorQuality||'').length>80?'…':''}</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:10px 14px">
+          <div style="font-size:10px;color:#6ee7b7;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Cost of Delay</div>
+          <div style="font-size:12px;color:#a7f3d0;font-weight:700;max-width:220px">${esc((sc.costOfDelay||'').slice(0,80))}${(sc.costOfDelay||'').length>80?'…':''}</div>
+        </div>
+      </div>
+    </div>
+    ${sCard('📋','Executive Summary','For your CPO, VP, or stakeholder review','#0f172a',
+      infoCard(`<div style="font-size:14px;color:#334155;line-height:1.8">${esc(sc.executiveSummary)}</div>`)
+    )}
+    <div class="grid-2">
+      ${sCard('🚨','Non-Negotiables Before Launch','Hard blockers — no exceptions','#ef4444', nonnegs)}
+      ${sCard('⚠️','Top Risks','Key risks with mitigation','#f59e0b', risks)}
+    </div>
+    ${sCard('❓','Stakeholder FAQ','Plain-English answers for leadership','#6366f1', faq)}`;
+}
+
+// ── 11. Engineering Handoff ───────────────────────────────────────────────────
+function renderHandoff(d) {
+  const eh = d.engineeringHandoff || {};
+  const deps = (eh.dependencies||[]).map(dep => {
+    const typeColor = { LLM:'#8b5cf6','Vector DB':'#0ea5e9',API:'#10b981',Database:'#f59e0b',Cache:'#6366f1' };
+    const tc = typeColor[dep.type] || '#64748b';
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="background:${tc}15;color:${tc};border:1px solid ${tc}30;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">${esc(dep.type)}</span>
+        <span style="font-weight:700;font-size:13px;color:#0f172a">${esc(dep.name)}</span>
+      </div>
+      <div class="grid-2">
+        <div style="font-size:12px;color:#64748b"><span style="font-weight:700;color:#94a3b8">Purpose:</span> ${esc(dep.purpose)}</div>
+        <div style="font-size:12px;color:#6366f1"><span style="font-weight:700;color:#94a3b8">Mock:</span> ${esc(dep.mockStrategy)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    ${sCard('📐','I/O Specification','Exact contract the model must fulfil','#6366f1',`
+      <div class="grid-2" style="margin-bottom:16px">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Latency Budget</div>
+          <div style="font-size:16px;font-weight:800;color:#15803d">${esc(eh.latencyBudget||'—')}</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Token Budget / Call</div>
+          <div style="font-size:16px;font-weight:800;color:#1d4ed8">${esc(eh.tokenBudget||'—')}</div>
+        </div>
+      </div>
+      ${codeBlock(eh.systemPromptTemplate||'', 'system_prompt_template')}
+      <div class="grid-2">
+        ${codeBlock(eh.inputSchema||'', 'input_schema')}
+        ${codeBlock(eh.outputSchema||'', 'output_schema')}
+      </div>`
+    )}
+    ${sCard('🔌','Dependencies & Mock Strategy','Every system this feature touches','#0ea5e9', deps)}
+    ${sCard('💻','Eval Code Scaffold','Copy, adapt, run — real Python eval harness','#10b981',`
+      ${codeBlock(eh.codeScaffold||'', 'eval_harness.py')}
+      <div class="grid-2">
+        ${codeBlock(eh.fixtureExample||'', 'test_fixture_example.json')}
+        ${infoCard(`${lbl('Prompt Versioning Strategy')}${bodyTxt(eh.promptVersioningStrategy,'font-size:13px')}`)}
+      </div>`
+    )}`;
+}
+
+// ── 12. Risks & Assumptions ───────────────────────────────────────────────────
+function renderRisks(d) {
+  const ar = d.assumptionsAndRisks || {};
+
+  const assumptions = (ar.coreAssumptions||[]).map((a,i) =>
+    `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:12px">
+      <div style="background:#f8fafc;padding:10px 16px;border-bottom:1px solid #e2e8f0;display:flex;gap:10px;align-items:flex-start">
+        <div style="width:22px;height:22px;background:#0f172a;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</div>
+        <div style="font-weight:700;font-size:13px;color:#0f172a;line-height:1.4">${esc(a.assumption)}</div>
+      </div>
+      <div class="grid-3" style="padding:12px 16px;gap:12px">
+        <div><div style="font-size:10px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">⚠ If Wrong</div><div style="font-size:12px;color:#7f1d1d;line-height:1.5">${esc(a.ifWrong)}</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">✓ Validate By</div><div style="font-size:12px;color:#334155;line-height:1.5">${esc(a.validationMethod)}</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Owner</div><div style="font-size:12px;color:#334155;font-weight:600">${esc(a.owner)}</div></div>
+      </div>
+    </div>`).join('');
+
+  const impColor = { High:'#ef4444', Medium:'#f59e0b', Low:'#10b981' };
+  const impBg    = { High:'#fef2f2', Medium:'#fffbeb', Low:'#f0fdf4' };
+  const unknowns = (ar.knownUnknowns||[]).map(u =>
+    `<div style="background:${impBg[u.impact]||'#f8fafc'};border:1px solid ${impColor[u.impact]||'#e2e8f0'}30;border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <div style="font-weight:700;font-size:13px;color:#0f172a">${esc(u.unknown)}</div>
+        <span style="background:#fff;color:${impColor[u.impact]||'#64748b'};border:1px solid ${impColor[u.impact]||'#e2e8f0'}40;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap">${esc(u.impact)}</span>
+      </div>
+      <div style="font-size:12px;color:#475569">→ ${esc(u.resolutionPath)}</div>
+    </div>`).join('');
+
+  const limitations = (ar.evalLimitations||[]).map(l =>
+    `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-bottom:6px">
+      <span style="color:#d97706;font-weight:700;flex-shrink:0">⚠</span>
+      <span style="font-size:13px;color:#78350f;line-height:1.5">${esc(l)}</span>
+    </div>`).join('');
+
+  const decisions = (ar.decisionLog||[]).map((dec,i) =>
+    `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="font-weight:700;font-size:13px;color:#0f172a;margin-bottom:8px">${i+1}. ${esc(dec.decision)}</div>
+      <div class="grid-2">
+        <div style="font-size:12px;color:#334155"><span style="font-weight:700;color:#10b981">Rationale:</span> ${esc(dec.rationale)}</div>
+        <div style="font-size:12px;color:#b45309"><span style="font-weight:700">Tradeoff:</span> ${esc(dec.tradeoff)}</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    ${sCard('🔍','Core Assumptions','What this framework assumes — and what breaks if wrong','#6366f1', assumptions)}
+    <div class="grid-2">
+      ${sCard('❓','Known Unknowns','What we know we do not know yet','#f59e0b', unknowns)}
+      ${sCard('⚠️','Eval Limitations','Honest blind spots in this framework','#ef4444', limitations)}
+    </div>
+    ${sCard('📝','Decision Log','Key design decisions and their tradeoffs','#0ea5e9', decisions)}`;
+}
+
+</script>
+</body>
+</html>
