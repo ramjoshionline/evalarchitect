@@ -33,6 +33,4 @@ Users enter their own [Anthropic API key](https://console.anthropic.com/keys) on
 
 ---
 
-## Cost per generation
-
-~$0.05–0.10 per generation from the user's own Anthropic API account (`claude-sonnet-4-20250514`).
+[Detailed blog post here](https://aiforproduct.substack.com/p/ai-agent-that-creates-quality-eval) 
